@@ -1,4 +1,5 @@
 package RecoveryPostSwap;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -17,11 +18,11 @@ public class SwapsPaser {
 	public List<SwapEntity> swapList = new ArrayList<SwapEntity>();;
 
 
-	public  void paserData(String fileName){
-		//System.out.println("Start...");
+	public void paserData(String fileName) {
+		// System.out.println("Start...");
 		BufferedReader br = null;
 		StringBuffer buffer = null;
-		
+
 		String subFleetName = null;
 		subfleetMap = new HashMap<String, String>();
 		// read file
@@ -36,14 +37,15 @@ public class SwapsPaser {
 			Matcher lineMatcher = null;
 
 			while ((lineTxt = br.readLine()) != null) {
-				//lineRegEx = "Subfleet ([0-9]{3}[a-zA-Z]*)";
-				lineRegEx = "Subfleet ([0-9]{3})";
+				// lineRegEx = "Subfleet ([0-9]{3}[a-zA-Z]*)";
+				lineRegEx = "Subfleet ([0-9]{2})";
 				Pattern linePattern = Pattern.compile(lineRegEx);
 				lineMatcher = linePattern.matcher(lineTxt);
 
 				if (lineMatcher.find()) {
 					subFleetName = lineMatcher.group(1);
-					//System.out.println(subFleetName +" -> "+lineMatcher.group(1));
+					// System.out.println(subFleetName +" ->
+					// "+lineMatcher.group(1));
 				} else {
 					lineRegEx = "Aircraft (B[0-9]{3,4})";
 					Pattern acPattern = Pattern.compile(lineRegEx);
@@ -61,12 +63,12 @@ public class SwapsPaser {
 			e.printStackTrace();
 		}
 		PaserSwaps(buffer.toString());
-		//System.out.print(subfleetMap);
+		// System.out.print(subfleetMap);
 
 	}
 
 	public List<SwapEntity> PaserSwaps(String inputTxt) {
-		
+
 		String regEx = "Aircraft (B[0-9]{3,4})[\\s\\S]{10,1000}?(Continues on its original path|switches to the original path of aircraft (B[0-9]{3,4}))";
 		Pattern pattern = Pattern.compile(regEx);
 		Matcher matcher = pattern.matcher(inputTxt);
@@ -79,7 +81,8 @@ public class SwapsPaser {
 			// resultMap.get(matcher.group(1)).add(matcher.group(2));
 			// System.out.println("group 1 " + matcher.group(1)
 			// +matcher.group(2)+matcher.group(3));
-			//System.out.println("group " + pairCount + matcher.group(1) + matcher.group(2) + matcher.group(3));
+			// System.out.println("group " + pairCount + matcher.group(1) +
+			// matcher.group(2) + matcher.group(3));
 		}
 		return swapList;
 	}

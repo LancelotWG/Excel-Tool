@@ -71,7 +71,7 @@ public class ReadExcel {
 
 	static HashMap<String, String> f_tail = new HashMap<String, String>();
 	static HashMap<RowHash, Integer> f_row = new HashMap<RowHash, Integer>();
-	static HashMap<String, Boolean> flightLocationMap = new HashMap<String,Boolean>();
+	static HashMap<String, Boolean> flightLocationMap = new HashMap<String, Boolean>();
 
 	// delay
 	static int delay_sheet = 0;
@@ -288,12 +288,19 @@ public class ReadExcel {
 
 		handleBasic(basicname, result, resultref);
 
-		File postSwapFile = new File(postSwapName);
-		if (postSwapName == null || !postSwapFile.exists()) {
-			printInfo(InfoLevel.Info, "no post swap file inputed");
-		} else {
-			handlePostSwaps(postSwapName, basicname, f_row, result);
+		if (postSwapName != null) {
+			File postSwapFile = new File(postSwapName);
+			if (postSwapName == null || !postSwapFile.exists()) {
+				printInfo(InfoLevel.Info, "no post swap file does not exist.");
+			} else {
+				handlePostSwaps(postSwapName, basicname, f_row, result);
+			}
 		}
+		else
+		{
+			printInfo(InfoLevel.Info, "no post swap file inputed");
+		}
+	
 
 		/*
 		 * abnormal excel file handle,if there has error,then close the resource
@@ -337,26 +344,30 @@ public class ReadExcel {
 		}
 		Map<String, Date> fleetRecoveryWindow;
 		fleetRecoveryWindow = new HashMap<String, Date>();
-		fleetRecoveryWindow.put("738", recoveryEnd737);
-		fleetRecoveryWindow.put("787", recoveryEnd787);
+		fleetRecoveryWindow.put("73", recoveryEnd737);
+		fleetRecoveryWindow.put("78", recoveryEnd787);
 
 		// Map<String, Date> aircraftAfterRecovery;
 		java.util.Iterator<SwapEntity> it = paser.swapList.iterator();
-		//System.out.println(paser.subfleetMap);
+		// System.out.println(paser.subfleetMap);
 		while (it.hasNext()) {
 			SwapEntity item = it.next();
 			String subFleet = paser.subfleetMap.get(item.orgAircraft);
-			if (null == subFleet  || subFleet == "")
-			{
-				printInfo(InfoLevel.Info, "post swap- Ac has no fleet info "+item.orgAircraft);
-				continue;
+			if (null == subFleet || subFleet == "") {
+				printInfo(InfoLevel.Info, "post swap- Ac has no fleet info " + item.orgAircraft);
+				subFleet = "73";
+				// continue;
 			}
 			item.recoveryEnd = fleetRecoveryWindow.get(subFleet);
-			printInfo(InfoLevel.Info,item.swappedAricraft + " switches to the path of -> " + item.orgAircraft 
-					+ item.recoveryEnd.toString());  
-			
+			if (item.recoveryEnd == null) {
+				printInfo(InfoLevel.Error, item.swappedAricraft + " aircraft has no subfleet " + item.orgAircraft);
+				continue;
+			}
+			printInfo(InfoLevel.Info, item.swappedAricraft + " switches to the path of -> " + item.orgAircraft
+					+ item.recoveryEnd.toString());
+
 		}
-		printInfo(InfoLevel.Info, "swaplist.count == "+ paser.swapList.size());
+		printInfo(InfoLevel.Info, "swaplist.count == " + paser.swapList.size());
 		// find all flight should be swapped, swap
 		return swapPostSwapFlihts(basicSheet, result, paser.swapList, f_row);
 	}
@@ -382,33 +393,36 @@ public class ReadExcel {
 			}
 
 			tailNo = cell.getStringCellValue().trim();
-			tailNo = tailNo.replace("-","");
+			tailNo = tailNo.replace("-", "");
 			dptCell = row.getCell(9);
 			if (dptCell.getCellTypeEnum() != CellType.STRING) {
 				printInfo(InfoLevel.Warn, "Result Row " + (i + 1) + " Col " + 9 + dptCell.getCellType()
 						+ " is not string! v= " + dptCell);
 				continue;
 			}
-			
+
 			try {
 				dptTime = sdf.parse(dptCell.getStringCellValue());
 			} catch (ParseException e) {
 				// TODO Auto-generated catch block
 				printInfo(InfoLevel.Warn, "Result Row " + (i + 1) + " Col " + 9 + dptCell.getCellType()
-				+ " can't be converted to Date! v= " + dptCell);
+						+ " can't be converted to Date! v= " + dptCell);
 				e.printStackTrace();
 				continue;
 			}
-			//dptTime = row.getCell(9).getDateCellValue(); // STD
+			// dptTime = row.getCell(9).getDateCellValue(); // STD
 
 			java.util.Iterator<SwapEntity> it = swapList.iterator();
 			while (it.hasNext()) {
 				SwapEntity item = it.next();
-				
+
 				if (tailNo.equals(item.orgAircraft) && dptTime.after(item.recoveryEnd)) {
 					postSwapCount++;
-					printInfo(InfoLevel.Info, "post recovery swap " + item.orgAircraft + dptTime.toString());
-					cell.setCellValue(item.swappedAricraft);
+					printInfo(InfoLevel.Info, "post recovery swap -" + item.orgAircraft + " -" + item.swappedAricraft
+							+ "-" + dptTime.toString());
+					// maybe we should reuse refreshSwapRow fucn
+					// value = value.substring(0, 1) + "-" + value.substring(1);
+					cell.setCellValue(item.swappedAricraft.substring(0, 1) + "-" + item.swappedAricraft.substring(1));
 				}
 			}
 		}
@@ -452,11 +466,19 @@ public class ReadExcel {
 			source = basic.getRow(i);
 			sink = result.createRow(i);
 
-			String day = source.getCell(basic_Departure_Col).getStringCellValue().trim();
-			// String
-			// day=TableTool.getStringValue(source.getCell(Basic_Departure_Col));
-			day = day.substring(0, 8);// DDMMYYYY_HHMM,just need the day,ignore
-										// the hour and minute
+			Cell timeCell = source.getCell(basic_Departure_Col);
+			String day;
+			if (null != timeCell) {
+				day = source.getCell(basic_Departure_Col).getStringCellValue().trim();
+				// String
+				// day=TableTool.getStringValue(source.getCell(Basic_Departure_Col));
+				day = day.substring(0, 8);// DDMMYYYY_HHMM,just need the
+											// day,ignore
+											// the hour and minut
+			} else {
+				printInfo(InfoLevel.Error, "Basic table: row" + (i + 1) + "Column" + basic_Departure_Col + "is null");
+				continue;
+			}
 
 			String flight = String.valueOf((int) source.getCell(basic_Fight_Col).getNumericCellValue());
 
@@ -589,8 +611,9 @@ public class ReadExcel {
 			printInfo(InfoLevel.Error,
 					"Serous Error:sheet(" + swap_sheet2 + ") for swap data(swaps between subfleets) is not exist");
 		// change the name of restore flight
-		//修改自兰望桂
-		String path = "./IATA vs ICAO Airport Codes(New).xlsx";
+		// 修改自兰望桂
+		String path = airport_Format_dir.trim();
+
 		handleFlightLocation(path);
 		boolean process_restore_flight = true;
 		if (process_restore_flight) {
@@ -599,6 +622,7 @@ public class ReadExcel {
 
 		abnormalwb.close();
 	}
+
 	/**
 	 * 
 	 * @param filePath
@@ -606,7 +630,7 @@ public class ReadExcel {
 	 * @throws IOException
 	 * @author LancelotWG 2017/7/5
 	 */
-	static private void handleFlightLocation(String filePath) throws InvalidFormatException, IOException{
+	static private void handleFlightLocation(String filePath) throws InvalidFormatException, IOException {
 		XSSFWorkbook flightLocation = new XSSFWorkbook(OPCPackage.open(new File(filePath)));
 		Sheet location = flightLocation.getSheetAt(1);
 		int index = location.getLastRowNum();
@@ -616,14 +640,14 @@ public class ReadExcel {
 			Cell countryCell = row.getCell(4);
 			String IATA = IATACell.getStringCellValue();
 			String country = "";
-			if(countryCell.getCellTypeEnum() != CellType.STRING){
+			if (countryCell.getCellTypeEnum() != CellType.STRING) {
 				country = "null";
-			}else{
+			} else {
 				country = countryCell.getStringCellValue();
 			}
-			if(country.equals("China")){
+			if (country.equals("China")) {
 				flightLocationMap.put(IATA, true);
-			}else{
+			} else {
 				flightLocationMap.put(IATA, false);
 			}
 		}
@@ -645,13 +669,13 @@ public class ReadExcel {
 		for (int i = delay_Header_Row; i <= delay.getLastRowNum() - delay_Footer_Row; i++) {
 			Row row = delay.getRow(i);
 
-			//机场起始站终点站
+			// 机场起始站终点站
 			Cell origLocationStationCell = row.getCell(2);
 			String origLocationStation = origLocationStationCell.getStringCellValue();
 			Cell destLocationStationCell = row.getCell(3);
 			String destLocationStation = destLocationStationCell.getStringCellValue();
-			//机场起始站终点站
-			
+			// 机场起始站终点站
+
 			Cell dateCell = row.getCell(delay_Departure_Col);
 			if (null == dateCell || dateCell.getCellTypeEnum() != CellType.NUMERIC
 					|| !DateUtil.isCellDateFormatted(dateCell)) {
@@ -710,19 +734,19 @@ public class ReadExcel {
 					if (flight_output_cell == null)
 						continue;
 					String new_flight_no = "";
-					//判断航班是国际航班还是国内航班
+					// 判断航班是国际航班还是国内航班
 					Boolean o = flightLocationMap.get(origLocationStation);
 					Boolean d = flightLocationMap.get(destLocationStation);
-					if(flightLocationMap.get(origLocationStation) && flightLocationMap.get(destLocationStation)){
-						//国内航班
+					if (flightLocationMap.get(origLocationStation) && flightLocationMap.get(destLocationStation)) {
+						// 国内航班
 						new_flight_no = gererateRestoreFlightNo(
 								flight_output_cell.getRichStringCellValue().getString().trim(), delayed_days);
-					}else{
-						//国际航班
+					} else {
+						// 国际航班
 						new_flight_no = gererateRestoreInternationalFlightNo(
 								flight_output_cell.getRichStringCellValue().getString().trim(), delayed_days);
 					}
-					//判断航班是国际航班还是国内航班
+					// 判断航班是国际航班还是国内航班
 					flight_output_cell.setCellValue(new_flight_no);
 
 				} else {
@@ -747,6 +771,7 @@ public class ReadExcel {
 			System.out.println(" Restore-fligth: O" + original_flight + " N:" + restore_flight);
 		return restore_flight;
 	}
+
 	/**
 	 * 
 	 * @param original_flight
@@ -758,9 +783,9 @@ public class ReadExcel {
 		String last_letter = original_flight.substring(original_flight.length() - 1);
 		// last_letter = restore_flight_renaming_map.get(last_letter);
 		String restore_flight = "";
-		if(original_flight.length() < 6){
+		if (original_flight.length() < 6) {
 			restore_flight = original_flight + "A";
-		}else{
+		} else {
 			restore_flight = original_flight.substring(0, original_flight.length() - 1)
 					+ restore_flight_renaming_map.get(last_letter);
 		}
