@@ -479,6 +479,13 @@ public class ReadExcel {
 				printInfo(InfoLevel.Error, "Basic table: row" + (i + 1) + "Column" + basic_Departure_Col + "is null");
 				continue;
 			}
+			
+			//修改自兰望桂
+			/**
+			 * 寻找联程航班
+			 */
+			
+			//修改自兰望桂
 
 			String flight = String.valueOf((int) source.getCell(basic_Fight_Col).getNumericCellValue());
 
