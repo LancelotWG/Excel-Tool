@@ -125,8 +125,8 @@ public class ReadExcel {
 	static int swap_Minute_Offset = 15;
 	static int swap_Header_Row = 2;
 	static int swap_Footer_Row = 0;
-	
-	//turn around time limit
+
+	// turn around time limit
 	static int turn_around_time_upperlimit = 20;
 	static int turn_around_time_lowerlimit = 120;
 
@@ -618,7 +618,7 @@ public class ReadExcel {
 		}
 		// 修改自兰望桂
 
-		System.out.println("Size:" + f_flights.size());
+		/*System.out.println("Size:" + f_flights.size());
 		for (Iterator iterator = f_flights.iterator(); iterator.hasNext();) {
 			Flights flights = (Flights) iterator.next();
 			if (flights.places.size() >= 2) {
@@ -632,7 +632,7 @@ public class ReadExcel {
 					System.out.println("Arrival:" + place2.arrival + " Time:" + place2.arrivalTime);
 				}
 			}
-		}
+		}*/
 
 		printInfo(InfoLevel.Info, "Handled Basic table:"
 				+ (basic.getLastRowNum() + 1 - basic_Header_Row - basic_Footer_Row) + " row have been writed!");
@@ -673,30 +673,7 @@ public class ReadExcel {
 			printInfo(InfoLevel.Error,
 					"Serous Error:sheet(" + swap_sheet2 + ") for swap data(swaps between subfleets) is not exist");
 		// change the name of restore flight
-
-		// 修改自兰望桂
-		/**
-		 * 将Broken写入记录类中
-		 */
-		for (Iterator iterator = f_joint_flights.iterator(); iterator.hasNext();) {
-			Flights flights = (Flights) iterator.next();
-			/*ArrayList<Place> place = flights.places;
-			boolean isNormal = true;
-			for (Iterator iterator2 = place.iterator(); iterator2.hasNext();) {
-				Place place2 = (Place) iterator2.next();
-				BrokenStatus status = place2.getBrokenStatus();
-				if (status != BrokenStatus.normal) {
-					isNormal = false;
-					break;
-				}
-			}*/
-			if (flights.isBreak) {
-				broken_records.add(new BrokenRecords(flights.number, flights.places));
-			}
-		}
-
-		// 修改自兰望桂
-
+		handleBrokenFlight(abnormalname, resultref);
 		// 修改自兰望桂
 		String path = airport_Format_dir.trim();
 		// 修改自兰望桂
@@ -923,53 +900,6 @@ public class ReadExcel {
 			String departure = row.getCell(delay_Takeoff_col).getStringCellValue().trim();
 			String arrival = row.getCell(delay_Arrival_col).getStringCellValue().trim();
 
-			// 修改自兰望桂
-			/**
-			 * 增加延误航班的Broken记录
-			 */
-			String tail = row.getCell(delay_Tail_Col).getStringCellValue().trim();
-			String pax = String.valueOf(((int) row.getCell(delay_Pax_col).getNumericCellValue()));
-
-			Date arrivalTime = row.getCell(delay_Arrival_Col).getDateCellValue();
-			arrivalTime.setHours(arrivalTime.getHours() + swap_Hour_Offset);
-			// arrivalTime.setMinutes(arrivalTime.getMinutes() +
-			// swap_Minute_Offset);
-
-			Date departureTime = row.getCell(delay_Departure_Col).getDateCellValue();
-			departureTime.setHours(departureTime.getHours() + swap_Hour_Offset);
-			// departureTime.setMinutes(departureTime.getMinutes() +
-			// swap_Minute_Offset);
-
-			Date eArrivalTime = row.getCell(delay_EArrival_Col).getDateCellValue();
-			eArrivalTime.setHours(eArrivalTime.getHours() + swap_Hour_Offset);
-			// eArrivalTime.setMinutes(eArrivalTime.getMinutes() +
-			// swap_Minute_Offset);
-
-			Date eDepartureTime = row.getCell(delay_EDeparture_Col).getDateCellValue();
-			eDepartureTime.setHours(eDepartureTime.getHours() + swap_Hour_Offset);
-			// eDepartureTime.setMinutes(eDepartureTime.getMinutes() +
-			// swap_Minute_Offset);
-
-			for (Iterator iterator = f_joint_flights.iterator(); iterator.hasNext();) {
-				Flights flights = (Flights) iterator.next();
-				if (flights.number.flightNumber.equals(flight)) {
-					ArrayList<Place> place = flights.places;
-					for (Iterator iterator2 = place.iterator(); iterator2.hasNext();) {
-						Place place2 = (Place) iterator2.next();
-						if (place2.tailNumber.equals(tail) && place2.arrival.equals(arrival)
-								&& place2.departure.equals(departure) && place2.arrivalTime.equals(arrivalTime)
-								&& place2.departureTime.equals(departureTime)) {
-							place2.setBrokenStatus(BrokenStatus.delay);
-							place2.setExpectedDepartureTime(eDepartureTime);
-							place2.setExpectedArrivalTime(eArrivalTime);
-							place2.setPax(pax);
-						}
-					}
-
-				}
-			}
-			// 修改自兰望桂
-
 			RowHash rowhash = new RowHash(flight, day, departure, arrival);
 
 			Integer rowid = f_row.get(rowhash);
@@ -984,42 +914,6 @@ public class ReadExcel {
 			}
 
 		}
-
-		for (Iterator iterator = f_joint_flights.iterator(); iterator.hasNext();) {
-			Flights flights = (Flights) iterator.next();
-			ArrayList<Place> place = flights.places;
-			Date markTime = new Date(0);
-			Place forwardPlace = null;
-			long timeout = 2 * 60 * 60 * 1000;
-			long intime = 20 * 60 * 1000;
-			for (Iterator iterator2 = place.iterator(); iterator2.hasNext();) {
-				Place place2 = (Place) iterator2.next();
-				if (place2.getBrokenStatus() == BrokenStatus.delay) {
-					if (place2.expectedDepartureTime.getTime() - markTime.getTime() <= timeout
-							&& place2.expectedDepartureTime.getTime() - markTime.getTime() >= intime) {
-						
-					} else {
-						if (forwardPlace != null) {
-							flights.isBreak = true;
-						}
-					}
-					markTime = place2.getExpectedArrivalTime();
-				} else {
-					if (place2.departureTime.getTime() - markTime.getTime() <= timeout
-							&& place2.departureTime.getTime() - markTime.getTime() >= intime) {
-						
-					} else {
-						if (forwardPlace != null) {
-							flights.isBreak = true;
-						}
-					}
-					markTime = place2.getArrivalTime();
-				}
-				forwardPlace = place2;
-			}
-
-		}
-
 		printInfo(InfoLevel.Info, "Delay table:Handle "
 				+ (delay.getLastRowNum() + 1 - delay_Header_Row - delay_Footer_Row) + " row in the Delay table");
 		// delaywb.close();
@@ -1076,40 +970,6 @@ public class ReadExcel {
 			String departure = row.getCell(cancel_Takeoff_col).getStringCellValue().trim();
 			String arrival = row.getCell(cancel_Arrival_col).getStringCellValue().trim();
 
-			// 修改自兰望桂
-			/**
-			 * 增加取消航班的Broken记录
-			 */
-			String tail = row.getCell(cancel_Tail_Col).getStringCellValue().trim();
-			String pax = String.valueOf(((int) row.getCell(cancel_Pax_col).getNumericCellValue()));
-
-			Date arrivalTime = row.getCell(cancel_Arrival_Col).getDateCellValue();
-			arrivalTime.setHours(arrivalTime.getHours() + cancel_Hour_Offset);
-			// arrivalTime.setMinutes(arrivalTime.getMinutes() +
-			// cancel_Minute_Offset);
-
-			Date departureTime = row.getCell(cancel_Departure_Col).getDateCellValue();
-			departureTime.setHours(departureTime.getHours() + cancel_Hour_Offset);
-			// departureTime.setMinutes(departureTime.getMinutes() +
-			// cancel_Minute_Offset);
-			for (Iterator iterator = f_joint_flights.iterator(); iterator.hasNext();) {
-				Flights flights = (Flights) iterator.next();
-				if (flights.number.flightNumber.equals(flight)) {
-					ArrayList<Place> place = flights.places;
-					for (Iterator iterator2 = place.iterator(); iterator2.hasNext();) {
-						Place place2 = (Place) iterator2.next();
-						if (place2.tailNumber.equals(tail) && place2.arrival.equals(arrival)
-								&& place2.departure.equals(departure) && place2.arrivalTime.equals(arrivalTime)
-								&& place2.departureTime.equals(departureTime)) {
-							place2.setBrokenStatus(BrokenStatus.cancel);
-							flights.isBreak = true;
-							place2.setPax(pax);
-						}
-					}
-
-				}
-			}
-			// 修改自兰望桂
 			RowHash rowhash = new RowHash(flight, day, departure, arrival);
 
 			Integer rowid = f_row.get(rowhash);
@@ -1184,32 +1044,6 @@ public class ReadExcel {
 			String flight = String.valueOf(((int) row.getCell(swap_Fight_Col1).getNumericCellValue()));
 			String departure = row.getCell(swap_Takeoff_col1).getStringCellValue().trim();
 			String arrival = row.getCell(swap_Arrival_col1).getStringCellValue().trim();
-			// date.setMinutes(minute - swap_Minute_Offset);
-			// 修改自兰望桂
-			/**
-			 * 增加更换飞机的Broken记录
-			 */
-			String tail = row.getCell(swap_Tail_Col1).getStringCellValue().trim();
-			String pax = String.valueOf(((int) row.getCell(swap_Pax_col1).getNumericCellValue()));
-			String newAircraft = row.getCell(swap_Aircraft_Col1).getStringCellValue().trim();
-			for (Iterator iterator = f_joint_flights.iterator(); iterator.hasNext();) {
-				Flights flights = (Flights) iterator.next();
-				if (flights.number.flightNumber.equals(flight)) {
-					ArrayList<Place> place = flights.places;
-					for (Iterator iterator2 = place.iterator(); iterator2.hasNext();) {
-						Place place2 = (Place) iterator2.next();
-						if (place2.tailNumber.equals(tail) && place2.arrival.equals(arrival)
-								&& place2.departure.equals(departure) && date.equals(place2.departureTime)) {
-							place2.setBrokenStatus(BrokenStatus.swap);
-							place2.setPax(pax);
-							place2.setNewFlight(newAircraft);
-						}
-					}
-
-				}
-			}
-
-			// 修改自兰望桂
 
 			RowHash rowhash = new RowHash(flight, day, departure, arrival);
 
@@ -1232,43 +1066,6 @@ public class ReadExcel {
 						+ " in the first sheet doesn't have match row in basic table!");
 			}
 
-		}
-		for (Iterator iterator = f_joint_flights.iterator(); iterator.hasNext();) {
-			Flights flights = (Flights) iterator.next();
-			ArrayList<Place> place = flights.places;
-			String aircraft = "";
-			boolean isNormal = true;
-			if (place.size() >= 2) {
-				if (place.get(0).getBrokenStatus() == BrokenStatus.swap) {
-					aircraft = place.get(0).getNewFlight();
-				} else {
-					aircraft = place.get(0).getTailNumber();
-				}
-			}
-
-			for (Iterator iterator2 = place.iterator(); iterator2.hasNext();) {
-				Place place2 = (Place) iterator2.next();
-				if (place2.getBrokenStatus() == BrokenStatus.swap) {
-					if (!aircraft.equals(place2.newFlight)) {
-						isNormal = false;
-						break;
-					}
-				} else {
-					if (!aircraft.equals(place2.tailNumber)) {
-						isNormal = false;
-						break;
-					}
-				}
-			}
-			if (!isNormal) {
-				/*for (Iterator iterator2 = place.iterator(); iterator2.hasNext();) {
-					Place place2 = (Place) iterator2.next();
-					if (place2.getBrokenStatus() == BrokenStatus.swap) {
-						place2.setBrokenStatus(BrokenStatus.normal);
-					}
-				}*/
-				flights.isBreak = true;
-			}
 		}
 		printInfo(InfoLevel.Info, "Swap table(" + swap_sheet_name1 + "):Handle "
 				+ (swap1.getLastRowNum() + 1 - swap_Footer_Row - swap_Header_Row) + " row in the swap table");
@@ -1553,19 +1350,257 @@ public class ReadExcel {
 	 * @throws InvocationTargetException
 	 * @throws InterruptedException
 	 */
-	static private void handleBrokenFlight(XSSFWorkbook wb, String excelname)
+	static private void handleBrokenFlight(String abnormalname, ResultRef resultref)
+			throws IOException, InvalidFormatException, InvocationTargetException, InterruptedException {
+		XSSFWorkbook abnormalwb = new XSSFWorkbook(OPCPackage.open(new File(abnormalname)));
+		Sheet cancel = abnormalwb.getSheetAt(cancel_sheet);
+		if (cancel != null) {
+			if (!cancel.getSheetName().equals(cancel_sheet_name)) {
+				printInfo(InfoLevel.Error, "Serious Error: Cancel table" + cancel_sheet
+						+ " sheet of cancel table is not named " + cancel_sheet_name);
+				return;
+			}
+			for (int i = cancel_Header_Row; i <= cancel.getLastRowNum() - cancel_Footer_Row; i++) {
+				Row row = cancel.getRow(i);
+				/**
+				 * 增加取消航班的Broken记录
+				 */
+				String flight = String.valueOf(((int) row.getCell(cancel_Fight_Col).getNumericCellValue()));
+				String departure = row.getCell(cancel_Takeoff_col).getStringCellValue().trim();
+				String arrival = row.getCell(cancel_Arrival_col).getStringCellValue().trim();
+				String tail = row.getCell(cancel_Tail_Col).getStringCellValue().trim();
+				String pax = String.valueOf(((int) row.getCell(cancel_Pax_col).getNumericCellValue()));
+
+				Date arrivalTime = row.getCell(cancel_Arrival_Col).getDateCellValue();
+				arrivalTime.setHours(arrivalTime.getHours() + cancel_Hour_Offset);
+				arrivalTime.setMinutes(arrivalTime.getMinutes() + cancel_Minute_Offset);
+
+				Date departureTime = row.getCell(cancel_Departure_Col).getDateCellValue();
+				departureTime.setHours(departureTime.getHours() + cancel_Hour_Offset);
+				departureTime.setMinutes(departureTime.getMinutes() + cancel_Minute_Offset);
+
+				for (Iterator iterator = f_joint_flights.iterator(); iterator.hasNext();) {
+					Flights flights = (Flights) iterator.next();
+					if (flights.number.flightNumber.equals(flight)) {
+						ArrayList<Place> place = flights.places;
+						for (Iterator iterator2 = place.iterator(); iterator2.hasNext();) {
+							Place place2 = (Place) iterator2.next();
+							if (place2.tailNumber.equals(tail) && place2.arrival.equals(arrival)
+									&& place2.departure.equals(departure) && place2.arrivalTime.equals(arrivalTime)
+									&& place2.departureTime.equals(departureTime)) {
+								place2.setBrokenStatus(BrokenStatus.cancel);
+								flights.isBreak = true;
+								place2.setPax(pax);
+							}
+						}
+
+					}
+				}
+			}
+		} else
+			printInfo(InfoLevel.Error, "Serous Error:sheet(" + cancel_sheet + ") for cancel data is not exist");
+		Sheet delay = abnormalwb.getSheetAt(delay_sheet);
+		if (delay != null){
+			if (!delay.getSheetName().equals(delay_sheet_name)) {
+				printInfo(InfoLevel.Error,
+						"Serous Error:delay table:" + (delay_sheet) + " sheet is not named " + delay_sheet_name);
+				return;
+			}
+			for (int i = delay_Header_Row; i <= delay.getLastRowNum() - delay_Footer_Row; i++) {
+				Row row = delay.getRow(i);
+				/**
+				 * 增加延误航班的Broken记录
+				 */
+				String flight = String.valueOf(((int) row.getCell(delay_Fight_Col).getNumericCellValue()));
+				String departure = row.getCell(delay_Takeoff_col).getStringCellValue().trim();
+				String arrival = row.getCell(delay_Arrival_col).getStringCellValue().trim();
+				String tail = row.getCell(delay_Tail_Col).getStringCellValue().trim();
+				String pax = String.valueOf(((int) row.getCell(delay_Pax_col).getNumericCellValue()));
+
+				Date arrivalTime = row.getCell(delay_Arrival_Col).getDateCellValue();
+				arrivalTime.setHours(arrivalTime.getHours() + swap_Hour_Offset);
+				arrivalTime.setMinutes(arrivalTime.getMinutes() + swap_Minute_Offset);
+
+				Date departureTime = row.getCell(delay_Departure_Col).getDateCellValue();
+				departureTime.setHours(departureTime.getHours() + swap_Hour_Offset);
+				departureTime.setMinutes(departureTime.getMinutes() + swap_Minute_Offset);
+
+				Date eArrivalTime = row.getCell(delay_EArrival_Col).getDateCellValue();
+				eArrivalTime.setHours(eArrivalTime.getHours() + swap_Hour_Offset);
+				eArrivalTime.setMinutes(eArrivalTime.getMinutes() + swap_Minute_Offset);
+
+				Date eDepartureTime = row.getCell(delay_EDeparture_Col).getDateCellValue();
+				eDepartureTime.setHours(eDepartureTime.getHours() + swap_Hour_Offset);
+				eDepartureTime.setMinutes(eDepartureTime.getMinutes() + swap_Minute_Offset);
+
+				for (Iterator iterator = f_joint_flights.iterator(); iterator.hasNext();) {
+					Flights flights = (Flights) iterator.next();
+					if (flights.number.flightNumber.equals(flight)) {
+						ArrayList<Place> place = flights.places;
+						for (Iterator iterator2 = place.iterator(); iterator2.hasNext();) {
+							Place place2 = (Place) iterator2.next();
+							if (place2.tailNumber.equals(tail) && place2.arrival.equals(arrival)
+									&& place2.departure.equals(departure) && place2.arrivalTime.equals(arrivalTime)
+									&& place2.departureTime.equals(departureTime)) {
+								place2.setBrokenStatus(BrokenStatus.delay);
+								place2.setExpectedDepartureTime(eDepartureTime);
+								place2.setExpectedArrivalTime(eArrivalTime);
+								place2.setPax(pax);
+							}
+						}
+
+					}
+				}
+			}
+			for (Iterator iterator = f_joint_flights.iterator(); iterator.hasNext();) {
+				Flights flights = (Flights) iterator.next();
+				ArrayList<Place> place = flights.places;
+				Date markTime = new Date(0);
+				Place forwardPlace = null;
+				long timeout = turn_around_time_upperlimit * 60 * 1000;
+				long intime = turn_around_time_lowerlimit * 60 * 1000;
+				for (Iterator iterator2 = place.iterator(); iterator2.hasNext();) {
+					Place place2 = (Place) iterator2.next();
+					if (place2.getBrokenStatus() == BrokenStatus.delay) {
+						if (place2.expectedDepartureTime.getTime() - markTime.getTime() <= timeout
+								&& place2.expectedDepartureTime.getTime() - markTime.getTime() >= intime) {
+
+						} else {
+							if (forwardPlace != null) {
+								flights.isBreak = true;
+							}
+						}
+						markTime = place2.getExpectedArrivalTime();
+					} else {
+						if (place2.departureTime.getTime() - markTime.getTime() <= timeout
+								&& place2.departureTime.getTime() - markTime.getTime() >= intime) {
+
+						} else {
+							if (forwardPlace != null) {
+								flights.isBreak = true;
+							}
+						}
+						markTime = place2.getArrivalTime();
+					}
+					forwardPlace = place2;
+				}
+
+			}
+		}else
+			printInfo(InfoLevel.Error, "Serous Error:sheet(" + delay_sheet + ") for deley data is not existsheet");
+		Sheet swap1 = abnormalwb.getSheetAt(swap_sheet1);
+		if (swap1 != null){
+			if (!swap1.getSheetName().equals(swap_sheet_name1)) {
+				printInfo(InfoLevel.Error, "Serious Error:Swap Table:" + swap_sheet1 + " sheet of swap table is not named "
+						+ swap_sheet_name1);
+				return;
+			}
+			for (int i = swap_Header_Row; i <= swap1.getLastRowNum() - swap_Footer_Row; i++) {
+				Row row = swap1.getRow(i);
+				/**
+				 * 增加更换飞机的Broken记录
+				 */
+				Cell dateCell = row.getCell(swap_Departure_Col1);
+				Cell hourCell = row.getCell(swap_Departure_Hour_Col1);
+				Date date = dateCell.getDateCellValue();
+				int hour = (int) hourCell.getNumericCellValue();
+				int minute = hour % 100;
+				hour = hour / 100;
+				date.setHours(hour + swap_Hour_Offset);
+				date.setMinutes(minute + swap_Minute_Offset);
+				String flight = String.valueOf(((int) row.getCell(swap_Fight_Col1).getNumericCellValue()));
+				String departure = row.getCell(swap_Takeoff_col1).getStringCellValue().trim();
+				String arrival = row.getCell(swap_Arrival_col1).getStringCellValue().trim();
+				String tail = row.getCell(swap_Tail_Col1).getStringCellValue().trim();
+				String pax = String.valueOf(((int) row.getCell(swap_Pax_col1).getNumericCellValue()));
+				String newAircraft = row.getCell(swap_Aircraft_Col1).getStringCellValue().trim();
+				for (Iterator iterator = f_joint_flights.iterator(); iterator.hasNext();) {
+					Flights flights = (Flights) iterator.next();
+					if (flights.number.flightNumber.equals(flight)) {
+						ArrayList<Place> place = flights.places;
+						for (Iterator iterator2 = place.iterator(); iterator2.hasNext();) {
+							Place place2 = (Place) iterator2.next();
+							if (place2.tailNumber.equals(tail) && place2.arrival.equals(arrival)
+									&& place2.departure.equals(departure) && date.equals(place2.departureTime)) {
+								place2.setBrokenStatus(BrokenStatus.swap);
+								place2.setPax(pax);
+								place2.setNewFlight(newAircraft);
+							}
+						}
+
+					}
+				}
+			}
+			for (Iterator iterator = f_joint_flights.iterator(); iterator.hasNext();) {
+				Flights flights = (Flights) iterator.next();
+				ArrayList<Place> place = flights.places;
+				String aircraft = "";
+				boolean isNormal = true;
+				if (place.size() >= 2) {
+					if (place.get(0).getBrokenStatus() == BrokenStatus.swap) {
+						aircraft = place.get(0).getNewFlight();
+					} else {
+						aircraft = place.get(0).getTailNumber();
+					}
+				}
+
+				for (Iterator iterator2 = place.iterator(); iterator2.hasNext();) {
+					Place place2 = (Place) iterator2.next();
+					if (place2.getBrokenStatus() == BrokenStatus.swap) {
+						if (!aircraft.equals(place2.newFlight)) {
+							isNormal = false;
+							break;
+						}
+					} else {
+						if (!aircraft.equals(place2.tailNumber)) {
+							isNormal = false;
+							break;
+						}
+					}
+				}
+				if (!isNormal) {
+					/*
+					 * for (Iterator iterator2 = place.iterator();
+					 * iterator2.hasNext();) { Place place2 = (Place)
+					 * iterator2.next(); if (place2.getBrokenStatus() ==
+					 * BrokenStatus.swap) {
+					 * place2.setBrokenStatus(BrokenStatus.normal); } }
+					 */
+					flights.isBreak = true;
+				}
+			}
+		}else
+			printInfo(InfoLevel.Error,
+					"Serous Error:sheet(" + swap_sheet1 + ") for swap data(swaps within subfleets) is not exist");
+
+		/**
+		 * 将Broken写入记录类中
+		 */
+		for (Iterator iterator = f_joint_flights.iterator(); iterator.hasNext();) {
+			Flights flights = (Flights) iterator.next();
+			/*
+			 * ArrayList<Place> place = flights.places; boolean isNormal = true;
+			 * for (Iterator iterator2 = place.iterator(); iterator2.hasNext();)
+			 * { Place place2 = (Place) iterator2.next(); BrokenStatus status =
+			 * place2.getBrokenStatus(); if (status != BrokenStatus.normal) {
+			 * isNormal = false; break; } }
+			 */
+			if (flights.isBreak) {
+				broken_records.add(new BrokenRecords(flights.number, flights.places));
+			}
+		}	
+	}
+	
+	static private void createBrokenFlightResultSheet(XSSFWorkbook wb, String excelname)
 			throws IOException, InvalidFormatException, InvocationTargetException, InterruptedException {
 		Sheet brokenResult = wb.createSheet(broken_result_sheet_name);
-
 		// copy the header
-
 		printInfo(InfoLevel.Info, "checked the result table:" + excelname);
 		File file = new File(excelname);
 		if (!file.exists()) {
 			printInfo(InfoLevel.Error, "Serious Error:Result file The Output file(" + excelname + ") is not exist!");
 			return;
 		}
-
 		XSSFWorkbook resultwb = new XSSFWorkbook(OPCPackage.open(file));
 		Sheet result = resultwb.getSheetAt(broken_result_sheet);
 		Row row = result.getRow(0);
@@ -1580,7 +1615,6 @@ public class ReadExcel {
 		int index = basic_Header_Row;
 		SimpleDateFormat dateformat = new SimpleDateFormat("yyyy-MM-dd HH:mm:SS", Locale.US);
 		for (int i = 0; i <= broken_records.size() - 1; i++) {
-
 			BrokenRecords brokenRecords = broken_records.get(i);
 			ArrayList<Place> places = brokenRecords.places;
 			for (Iterator iterator = places.iterator(); iterator.hasNext();) {
@@ -1632,7 +1666,6 @@ public class ReadExcel {
 			return;
 
 		// copy the header
-
 		printInfo(InfoLevel.Info, "checked the result table:" + excelname);
 		File file = new File(excelname);
 		if (!file.exists()) {
@@ -1651,9 +1684,10 @@ public class ReadExcel {
 		}
 
 		resultwb.close();
+		createBrokenFlightResultSheet(wb,excelname);
 		printInfo(InfoLevel.Info,
 				"Finished processing all input file,and refresh date to the result file:" + excelname);
-		handleBrokenFlight(wb, excelname);
+		
 		// flush the data to file
 		FileOutputStream fileOut = new FileOutputStream(excelname);
 		if (wb != null) {
