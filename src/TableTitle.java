@@ -566,6 +566,16 @@ class ResultRef {
 					ReadExcel.swap_Minute_Offset=intvalue;
 					break;
 				}
+				case "turn_around_time_upperlimit":
+				{
+					ReadExcel.turn_around_time_upperlimit=intvalue;
+					break;
+				}
+				case "turn_around_time_lowerlimit":
+				{
+					ReadExcel.turn_around_time_lowerlimit=intvalue;
+					break;
+				}
 				default:
 				{
 					System.out.println(" unknown configure name in ref value sheet:"+ name);

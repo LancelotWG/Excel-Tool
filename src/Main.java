@@ -28,6 +28,8 @@ public  class  Main implements ActionListener{
 	static String postSwapInput =null; // post swap inputs
 	static String result="";
 	static String ref="";
+	//Broken through flight 
+	static String brokenResult = "";
 	
 	static JFrame frame;
 	static JTextField basictext=new JTextField(20);
@@ -45,6 +47,7 @@ public  class  Main implements ActionListener{
 	static JButton deletebt=new JButton("Choose");*/
 	static JButton  resultbt=new JButton("Choose");
 	static JButton  refbt=new JButton("Choose");
+	
 	
 	
 	static JButton calbt=new JButton("Calculate");
@@ -107,8 +110,9 @@ public  class  Main implements ActionListener{
 			if(entry.charAt(1)=='=' &&(entry.charAt(0)=='B' || entry.charAt(0)=='b' ||
 					entry.charAt(0)=='A' ||  entry.charAt(0)=='a' || 					
 					entry.charAt(0)=='O' ||  entry.charAt(0)=='o' ||
-					entry.charAt(0)=='R' ||  entry.charAt(0)=='r' 
-					|| entry.charAt(0)=='S' ||  entry.charAt(0)=='s'))
+					entry.charAt(0)=='R' ||  entry.charAt(0)=='r' || 
+					entry.charAt(0)=='S' ||  entry.charAt(0)=='s' 
+					/*|| 修改自兰望桂entry.charAt(0)=='T' || entry.charAt(0)=='t'*/))
 				/*entry.charAt(0)=='C' ||  entry.charAt(0)=='c' ||
 				entry.charAt(0)=='S' ||  entry.charAt(0)=='s' ||*/
 			{
@@ -155,6 +159,17 @@ public  class  Main implements ActionListener{
 					if(!isCorrectFile(ref))
 						return false;
 				}
+				//修改自兰望桂
+				/**
+				 * 增加联程航班中断输出文件
+				 
+				else if(flag=='T'||flag=='t')
+				{
+					brokenResult=entry.substring(2);	
+					if(!isCorrectFile(brokenResult))
+						return false;
+				}*/
+				//修改自兰望桂
 			}
 			else 
 			{
@@ -202,7 +217,7 @@ public  class  Main implements ActionListener{
 		System.out.println("************************************************************************");
 		System.out.println("************************************************************************");
 		System.out.println("The cmd is like : R=reflection_file_dir  O=result_file dir  B=Basic_file_dir "
-				+ "S=Swap_file_dir  D=Delay_file dir  C=Cancel_file_dir \n");
+				+ "S=Swap_file_dir  D=Delay_file dir  C=Cancel_file_dir\n");
 		System.out.println("\nIf the dir has blank,then quotes the dir,for example B=\"Basic data.xlsx\"\n");
 		System.out.println("\nMake sure the file is exisit and is correct format,and the args order is not relative!\n");
 		System.out.println("\nPlus:the program only accept xlsx file!\n");
