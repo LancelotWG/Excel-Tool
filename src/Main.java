@@ -78,7 +78,7 @@ public  class  Main implements ActionListener{
 			}
 			
 			try {
-				ReadExcel.handle(basic, abnormal, result,ref,postSwapInput );
+				ReadExcel.handle(basic, abnormal, result,ref,postSwapInput,brokenResult);
 			//	ReadExcel.handle(basic, delay, delete, swap, result,ref);
 			} catch (InvocationTargetException e) {
 				// TODO Auto-generated catch block
@@ -112,7 +112,8 @@ public  class  Main implements ActionListener{
 					entry.charAt(0)=='O' ||  entry.charAt(0)=='o' ||
 					entry.charAt(0)=='R' ||  entry.charAt(0)=='r' || 
 					entry.charAt(0)=='S' ||  entry.charAt(0)=='s' 
-					/*|| 修改自兰望桂entry.charAt(0)=='T' || entry.charAt(0)=='t'*/))
+					/*修改自兰望桂*/
+					|| entry.charAt(0)=='T' || entry.charAt(0)=='t'))
 				/*entry.charAt(0)=='C' ||  entry.charAt(0)=='c' ||
 				entry.charAt(0)=='S' ||  entry.charAt(0)=='s' ||*/
 			{
@@ -162,18 +163,18 @@ public  class  Main implements ActionListener{
 				//修改自兰望桂
 				/**
 				 * 增加联程航班中断输出文件
-				 
+				 */
 				else if(flag=='T'||flag=='t')
 				{
 					brokenResult=entry.substring(2);	
 					if(!isCorrectFile(brokenResult))
 						return false;
-				}*/
+				}
 				//修改自兰望桂
 			}
 			else 
 			{
-				System.out.println("this program only accept file args:B/b,A/a,O/o,R/r,and the format is like B=File_Path");
+				System.out.println("this program only accept file args:B/b,A/a,O/o,R/r,T/t,and the format is like B=File_Path");
 				return false;
 			}
 					
@@ -217,7 +218,7 @@ public  class  Main implements ActionListener{
 		System.out.println("************************************************************************");
 		System.out.println("************************************************************************");
 		System.out.println("The cmd is like : R=reflection_file_dir  O=result_file dir  B=Basic_file_dir "
-				+ "S=Swap_file_dir  D=Delay_file dir  C=Cancel_file_dir\n");
+				+ "S=Swap_file_dir  D=Delay_file dir  C=Cancel_file_dir T=Borken_file_dir\n");
 		System.out.println("\nIf the dir has blank,then quotes the dir,for example B=\"Basic data.xlsx\"\n");
 		System.out.println("\nMake sure the file is exisit and is correct format,and the args order is not relative!\n");
 		System.out.println("\nPlus:the program only accept xlsx file!\n");
@@ -413,7 +414,7 @@ public  class  Main implements ActionListener{
 			frame.dispose();
 			frame=new ShowPanel();
 			frame.invalidate();	
-			Thread t=new Thread(new Cal(basic, abnormal, result,ref, postSwapInput));
+			Thread t=new Thread(new Cal(basic, abnormal, result,ref, postSwapInput, brokenResult));
 			//Thread t=new Thread(new Cal(basic, delay, delete, swap, result,ref));
 			t.start();
 			//SwingUtilities.invokeLater();
@@ -496,13 +497,13 @@ class  Cal implements Runnable{
 	String basic;
 	String abnormal;
 	static String postSwapInput =""; // post swap inputs
-
+	String brokenResult;
 	/*String delay;
 	String delete;
 	String swap;*/
 	String result;
 	String ref;
-	public Cal(String basic,String abnormal,String result,String ref, String postSwapInput)//String delay,String delete,String swap,
+	public Cal(String basic,String abnormal,String result,String ref, String postSwapInput, String brokenResult)//String delay,String delete,String swap,
 	{
 		this.basic=basic;
 		this.abnormal=abnormal;
@@ -512,6 +513,7 @@ class  Cal implements Runnable{
 		this.result=result;
 		this.ref=ref;
 		this.postSwapInput = postSwapInput;
+		this.brokenResult = brokenResult;
 	}
 	@Override
 	public void run() {
@@ -519,7 +521,7 @@ class  Cal implements Runnable{
 		
 		try {
 			//ReadExcel.handle(basic, delay, delete, swap, result,ref);
-			ReadExcel.handle(basic,abnormal, result,ref, postSwapInput);// delay, delete, swap,
+			ReadExcel.handle(basic,abnormal, result,ref, postSwapInput, brokenResult);// delay, delete, swap,
 		} catch (InvocationTargetException e) {
 		
 			e.printStackTrace();

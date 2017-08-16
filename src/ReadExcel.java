@@ -65,6 +65,8 @@ public class ReadExcel {
 
 	static int basic_Header_Row = 1;
 	static int basic_Footer_Row = 0;
+	
+	static int broken_Header_Row = 2;
 
 	static SimpleDateFormat basicTimeFormat = new SimpleDateFormat("ddMMyyyy_HHmm");
 	static String BasicTimeFormatString = "ddMMYYYY_HHmm";
@@ -164,7 +166,7 @@ public class ReadExcel {
 	static int result_sheet = 0;
 
 	static String broken_result_sheet_name = "Broken through flight ";
-	static int broken_result_sheet = 1;
+	static int broken_result_sheet = 0;
 
 	// airport code table setting
 	static HashMap<String, String> airport_Transform = new HashMap<String, String>();
@@ -209,10 +211,10 @@ public class ReadExcel {
 	// static public void handle( String basicname,String delayname,String
 	// cancelname,String swapname,String resultname,String refname) throws
 	// InvocationTargetException, InterruptedException
-	static public void handle(String basicname, String abnormal, String resultname, String refname, String postSwapName)
+	static public void handle(String basicname, String abnormal, String resultname, String refname, String postSwapName, String brokenResult)
 			throws InvocationTargetException, InterruptedException {
 		try {
-			readExcel(basicname, abnormal, resultname, refname, postSwapName);// delayname,
+			readExcel(basicname, abnormal, resultname, refname, postSwapName, brokenResult);// delayname,
 																				// cancelname,
 																				// swapname
 			// done
@@ -240,7 +242,7 @@ public class ReadExcel {
 
 	// String delayname,String cancelname,String swapname
 	static private void readExcel(String basicname, String abnormal, String resultname, String refname,
-			String postSwapName)
+			String postSwapName, String brokenResult)
 			throws IOException, InvalidFormatException, InvocationTargetException, InterruptedException {
 		// clearHistory(); //If don't re-run,then,don't need to clear the
 		// resource
@@ -335,13 +337,13 @@ public class ReadExcel {
 			printInfo(InfoLevel.Error, "Abnormal file(" + abnormal + ")file is not exist!");
 		else {
 			printInfo(InfoLevel.Info, "Handel abnormal excel file  .....");
-			handleAbnormal(abnormal, result, f_row, resultref);
+			handleAbnormal(abnormal, result, f_row, resultref, brokenResult);
 		}
 
 		// deal with post recovery window swap
 
 		// flush result
-		flushToFile(resultwb, result, resultname);
+		flushToFile(resultwb, result, resultname, brokenResult);
 		resultwb.close();
 
 	}
@@ -642,7 +644,7 @@ public class ReadExcel {
 	}
 
 	static private void handleAbnormal(String abnormalname, Sheet result, HashMap<RowHash, Integer> f_row,
-			ResultRef resultref)
+			ResultRef resultref, String brokenResult)
 			throws InvalidFormatException, IOException, InvocationTargetException, InterruptedException {
 
 		XSSFWorkbook abnormalwb = new XSSFWorkbook(OPCPackage.open(new File(abnormalname)));
@@ -673,7 +675,7 @@ public class ReadExcel {
 			printInfo(InfoLevel.Error,
 					"Serous Error:sheet(" + swap_sheet2 + ") for swap data(swaps between subfleets) is not exist");
 		// change the name of restore flight
-		handleBrokenFlight(abnormalname, resultref);
+		handleBrokenFlight(abnormalname, resultref, brokenResult);
 		// 修改自兰望桂
 		String path = airport_Format_dir.trim();
 		// 修改自兰望桂
@@ -1350,7 +1352,7 @@ public class ReadExcel {
 	 * @throws InvocationTargetException
 	 * @throws InterruptedException
 	 */
-	static private void handleBrokenFlight(String abnormalname, ResultRef resultref)
+	static private void handleBrokenFlight(String abnormalname, ResultRef resultref, String brokenResult)
 			throws IOException, InvalidFormatException, InvocationTargetException, InterruptedException {
 		XSSFWorkbook abnormalwb = new XSSFWorkbook(OPCPackage.open(new File(abnormalname)));
 		Sheet cancel = abnormalwb.getSheetAt(cancel_sheet);
@@ -1591,35 +1593,40 @@ public class ReadExcel {
 		}	
 	}
 	
-	static private void createBrokenFlightResultSheet(XSSFWorkbook wb, String excelname)
+	static private void createBrokenFlightResultSheet(String brokenResult)
 			throws IOException, InvalidFormatException, InvocationTargetException, InterruptedException {
-		Sheet brokenResult = wb.createSheet(broken_result_sheet_name);
+		XSSFWorkbook wb = new XSSFWorkbook();
+		Sheet brokenResultSheet = wb.createSheet(broken_result_sheet_name);
 		// copy the header
-		printInfo(InfoLevel.Info, "checked the result table:" + excelname);
-		File file = new File(excelname);
+		printInfo(InfoLevel.Info, "checked the result table:" + brokenResult);
+		File file = new File(brokenResult);
 		if (!file.exists()) {
-			printInfo(InfoLevel.Error, "Serious Error:Result file The Output file(" + excelname + ") is not exist!");
+			printInfo(InfoLevel.Error, "Serious Error:Result file The Output file(" + brokenResult + ") is not exist!");
 			return;
 		}
 		XSSFWorkbook resultwb = new XSSFWorkbook(OPCPackage.open(file));
 		Sheet result = resultwb.getSheetAt(broken_result_sheet);
 		Row row = result.getRow(0);
-
-		Row sink = brokenResult.createRow(0);
+		Row sink = brokenResultSheet.createRow(0);
+		sink.createCell(0).setCellValue(row.getCell(0).getStringCellValue().trim());
+		
+		sink.createCell(1).setCellValue(broken_records.size());
+		row = result.getRow(1);
+		sink = brokenResultSheet.createRow(1);
 		for (int i = 0; i < row.getLastCellNum(); i++) {
 			// printInfo(InfoLevel.Info, "-> " + i + );
 			sink.createCell(i).setCellValue(row.getCell(i).getStringCellValue().trim());
 		}
 		Cell cell;
 		Row sink1;
-		int index = basic_Header_Row;
+		int index = broken_Header_Row;
 		SimpleDateFormat dateformat = new SimpleDateFormat("yyyy-MM-dd HH:mm:SS", Locale.US);
 		for (int i = 0; i <= broken_records.size() - 1; i++) {
 			BrokenRecords brokenRecords = broken_records.get(i);
 			ArrayList<Place> places = brokenRecords.places;
 			for (Iterator iterator = places.iterator(); iterator.hasNext();) {
 				Place place = (Place) iterator.next();
-				sink1 = brokenResult.createRow(index);
+				sink1 = brokenResultSheet.createRow(index);
 				cell = sink1.createCell(0);
 				cell.setCellValue(brokenRecords.number.flightNumber);
 				cell = sink1.createCell(1);
@@ -1658,9 +1665,19 @@ public class ReadExcel {
 			}
 
 		}
+		resultwb.close();
+		// flush the data to file
+		FileOutputStream fileOut = new FileOutputStream(brokenResult);
+		if (wb != null) {
+			wb.write(fileOut);
+			fileOut.close();
+			wb.close();
+		} else {
+			printInfo(InfoLevel.Error, "Serious Error: flush To File,the workbook is null");
+		}
 	}
 
-	static private void flushToFile(XSSFWorkbook wb, Sheet sheet, String excelname)
+	static private void flushToFile(XSSFWorkbook wb, Sheet sheet, String excelname, String brokenResult)
 			throws IOException, InvalidFormatException, InvocationTargetException, InterruptedException {
 		if (sheet == null)
 			return;
@@ -1684,7 +1701,7 @@ public class ReadExcel {
 		}
 
 		resultwb.close();
-		createBrokenFlightResultSheet(wb,excelname);
+		createBrokenFlightResultSheet(brokenResult);
 		printInfo(InfoLevel.Info,
 				"Finished processing all input file,and refresh date to the result file:" + excelname);
 		
