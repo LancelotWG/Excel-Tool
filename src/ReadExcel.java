@@ -48,7 +48,10 @@ public class ReadExcel {
 	static String String_Empty = "Null";
 	static SimpleDateFormat swapTimeFormat = new SimpleDateFormat("ddMMYYYY");
 	private static Logger logger = Logger.getLogger(ReadExcel.class);
-
+	
+	//联程航班时间段
+	static String recovery_Begin = "";
+	static String recovery_End = "";
 	// basic
 	static int basic_Sheet = 8;
 	static String basic_Sheet_Name = "8_Flight_Data";
@@ -66,7 +69,7 @@ public class ReadExcel {
 	static int basic_Header_Row = 1;
 	static int basic_Footer_Row = 0;
 	
-	static int broken_Header_Row = 2;
+	static int broken_Header_Row = 3;
 
 	static SimpleDateFormat basicTimeFormat = new SimpleDateFormat("ddMMyyyy_HHmm");
 	static String BasicTimeFormatString = "ddMMYYYY_HHmm";
@@ -243,7 +246,7 @@ public class ReadExcel {
 	// String delayname,String cancelname,String swapname
 	static private void readExcel(String basicname, String abnormal, String resultname, String refname,
 			String postSwapName, String brokenResult)
-			throws IOException, InvalidFormatException, InvocationTargetException, InterruptedException {
+			throws IOException, InvalidFormatException, InvocationTargetException, InterruptedException, ParseException {
 		// clearHistory(); //If don't re-run,then,don't need to clear the
 		// resource
 		logger.info("\n\nNew Log.Below log items are create at: " + (new Date()));
@@ -360,18 +363,28 @@ public class ReadExcel {
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 		Date recoveryEnd787 = null;
 		Date recoveryEnd737 = null;
+		Date recoveryBegin787 = null;
+		Date recoveryBegin737 = null;
+
 		try {
-			recoveryEnd737 = sdf.parse("2017-03-25 14:00:00");
-			recoveryEnd787 = sdf.parse("2017-03-26 15:30:00");
+			recoveryEnd737 = sdf.parse(recovery_End); // in local time
+			recoveryEnd787 = sdf.parse(recovery_End);
+			recoveryBegin787 = sdf.parse(recovery_Begin);
+			recoveryBegin737 = sdf.parse(recovery_Begin);
 		} catch (ParseException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		Map<String, Date> fleetRecoveryWindow;
-		fleetRecoveryWindow = new HashMap<String, Date>();
-		fleetRecoveryWindow.put("73", recoveryEnd737);
-		fleetRecoveryWindow.put("78", recoveryEnd787);
-
+		Map<String, Date> fleetRecoveryBegin;
+		fleetRecoveryBegin = new HashMap<String, Date>();
+		fleetRecoveryBegin.put("73", recoveryBegin737);
+		fleetRecoveryBegin.put("78", recoveryBegin787);
+		Map<String, Date> fleetRecoveryEnd;
+		fleetRecoveryEnd = new HashMap<String, Date>();
+		fleetRecoveryEnd.put("73", recoveryEnd737);
+		fleetRecoveryEnd.put("78", recoveryEnd787);
+		
+		
 		// Map<String, Date> aircraftAfterRecovery;
 		java.util.Iterator<SwapEntity> it = paser.swapList.iterator();
 		// System.out.println(paser.subfleetMap);
@@ -383,8 +396,10 @@ public class ReadExcel {
 				subFleet = "73";
 				// continue;
 			}
-			item.recoveryEnd = fleetRecoveryWindow.get(subFleet);
-			if (item.recoveryEnd == null) {
+			item.recoveryEnd = fleetRecoveryEnd.get(subFleet);
+			item.recoveryBegin = fleetRecoveryBegin.get(subFleet);
+			
+			if (item.recoveryEnd == null || null == item.recoveryBegin) {
 				printInfo(InfoLevel.Error, item.swappedAricraft + " aircraft has no subfleet " + item.orgAircraft);
 				continue;
 			}
@@ -402,9 +417,10 @@ public class ReadExcel {
 			throws IOException, InvocationTargetException, InterruptedException, InvalidFormatException {
 		printInfo(InfoLevel.Info, "Start  swap post recovery  swapPostSwapFlihts---");
 
-		Cell cell, dptCell;
+		Cell cell, dptCell, arrivalCell;
 		Row row;
 		Date dptTime = null;
+		Date arrivalTime = null;
 		String tailNo;
 		int postSwapCount = 0;
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd  HH:mm:ss");
@@ -419,18 +435,21 @@ public class ReadExcel {
 
 			tailNo = cell.getStringCellValue().trim();
 			tailNo = tailNo.replace("-", "");
-			dptCell = row.getCell(9);
-			if (dptCell.getCellTypeEnum() != CellType.STRING) {
-				printInfo(InfoLevel.Warn, "Result Row " + (i + 1) + " Col " + 9 + dptCell.getCellType()
+			dptCell = row.getCell(9); // STD of result
+			arrivalCell = row.getCell(13); //STA of result
+			if (dptCell.getCellTypeEnum() != CellType.STRING  || arrivalCell.getCellTypeEnum() != CellType.STRING 
+				) {
+				printInfo(InfoLevel.Warn, "Result Row " + (i + 1) + " Col " + 9+ " or col " + 13 + dptCell.getCellType()
 						+ " is not string! v= " + dptCell);
 				continue;
 			}
 
 			try {
 				dptTime = sdf.parse(dptCell.getStringCellValue());
+				arrivalTime = sdf.parse(arrivalCell.getStringCellValue());
 			} catch (ParseException e) {
 				// TODO Auto-generated catch block
-				printInfo(InfoLevel.Warn, "Result Row " + (i + 1) + " Col " + 9 + dptCell.getCellType()
+				printInfo(InfoLevel.Warn, "Result Row " + (i + 1) + " Col " + 9+ " or col " + 13 + dptCell.getCellType()
 						+ " can't be converted to Date! v= " + dptCell);
 				e.printStackTrace();
 				continue;
@@ -441,7 +460,8 @@ public class ReadExcel {
 			while (it.hasNext()) {
 				SwapEntity item = it.next();
 
-				if (tailNo.equals(item.orgAircraft) && dptTime.after(item.recoveryEnd)) {
+				if (tailNo.equals(item.orgAircraft) && dptTime.after(item.recoveryBegin)
+						&& arrivalTime.after(item.recoveryEnd)) {
 					postSwapCount++;
 					printInfo(InfoLevel.Info, "post recovery swap -" + item.orgAircraft + " -" + item.swappedAricraft
 							+ "-" + dptTime.toString());
@@ -465,7 +485,7 @@ public class ReadExcel {
 	 */
 
 	static private boolean handleBasic(String basicname, Sheet result, ResultRef resultref)
-			throws IOException, InvocationTargetException, InterruptedException, InvalidFormatException {
+			throws IOException, InvocationTargetException, InterruptedException, InvalidFormatException, ParseException {
 
 		XSSFWorkbook basicwb = new XSSFWorkbook(OPCPackage.open(basicname));
 		printInfo(InfoLevel.Info, "Init the aircraft map data" + basic_F_T_sheet_name);
@@ -612,10 +632,24 @@ public class ReadExcel {
 		/**
 		 * 存储联程航班
 		 */
+		SimpleDateFormat dateFormat1 = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		Date begin = dateFormat1.parse(recovery_Begin);
+		Date end = dateFormat1.parse(recovery_End);
 		for (Iterator iterator = f_flights.iterator(); iterator.hasNext();) {
 			Flights flights = (Flights) iterator.next();
 			if (flights.places.size() >= 2) {
-				f_joint_flights.add(flights);
+				ArrayList<Place> places = flights.places;
+				boolean isAdd = true;
+				for (Iterator iterator1 = places.iterator(); iterator1.hasNext();) {
+					Place place = (Place) iterator1.next();
+					if(place.departureTime.getTime() < begin.getTime() || place.arrivalTime.getTime() > end.getTime()){
+						isAdd = false;
+						break;
+					}
+				}
+				if(isAdd){
+					f_joint_flights.add(flights);
+				}
 			}
 		}
 		// 修改自兰望桂
@@ -1389,13 +1423,32 @@ public class ReadExcel {
 							Place place2 = (Place) iterator2.next();
 							if (place2.tailNumber.equals(tail) && place2.arrival.equals(arrival)
 									&& place2.departure.equals(departure) && place2.arrivalTime.equals(arrivalTime)
-									&& place2.departureTime.equals(departureTime)) {
+									&& place2.departureTime.getYear() == departureTime.getYear()
+									&& place2.departureTime.getMonth() == departureTime.getMonth()
+									&& place2.departureTime.getDay() == departureTime.getDay()) {
 								place2.setBrokenStatus(BrokenStatus.cancel);
 								flights.isBreak = true;
 								place2.setPax(pax);
 							}
 						}
 
+					}
+				}
+			}
+			for (Iterator iterator = f_joint_flights.iterator(); iterator.hasNext();) {
+				Flights flights = (Flights) iterator.next();
+				if (flights.isBreak) {
+					ArrayList<Place> place = flights.places;
+					boolean isAllCancel = true;
+					for (Iterator iterator2 = place.iterator(); iterator2.hasNext();) {
+						Place place2 = (Place) iterator2.next();
+						if(place2.brokenStatus != BrokenStatus.cancel){
+							isAllCancel = false;
+							break;
+						}
+					}
+					if(isAllCancel){
+						flights.isBreak = false;
 					}
 				}
 			}
@@ -1443,7 +1496,9 @@ public class ReadExcel {
 							Place place2 = (Place) iterator2.next();
 							if (place2.tailNumber.equals(tail) && place2.arrival.equals(arrival)
 									&& place2.departure.equals(departure) && place2.arrivalTime.equals(arrivalTime)
-									&& place2.departureTime.equals(departureTime)) {
+									&& place2.departureTime.getYear() == departureTime.getYear()
+									&& place2.departureTime.getMonth() == departureTime.getMonth()
+									&& place2.departureTime.getDay() == departureTime.getDay()) {
 								place2.setBrokenStatus(BrokenStatus.delay);
 								place2.setExpectedDepartureTime(eDepartureTime);
 								place2.setExpectedArrivalTime(eArrivalTime);
@@ -1523,7 +1578,10 @@ public class ReadExcel {
 						for (Iterator iterator2 = place.iterator(); iterator2.hasNext();) {
 							Place place2 = (Place) iterator2.next();
 							if (place2.tailNumber.equals(tail) && place2.arrival.equals(arrival)
-									&& place2.departure.equals(departure) && date.equals(place2.departureTime)) {
+									&& place2.departure.equals(departure) 
+									&& date.getYear() == place2.departureTime.getYear()
+									&& date.getMonth() == place2.departureTime.getMonth()
+									&& date.getDay() == place2.departureTime.getDay()) {
 								place2.setBrokenStatus(BrokenStatus.swap);
 								place2.setPax(pax);
 								place2.setNewFlight(newAircraft);
@@ -1593,8 +1651,35 @@ public class ReadExcel {
 		}	
 	}
 	
+	static private ArrayList<Integer> brokenFlightClassification(){
+		ArrayList<Integer> result = new ArrayList<Integer>();
+		result.add(0);//cancel
+		result.add(0);//swap
+		result.add(0);//delay
+		for (int i = 0; i <= broken_records.size() - 1; i++) {
+			BrokenRecords brokenRecords = broken_records.get(i);
+			ArrayList<Place> places = brokenRecords.places;
+			for (Iterator iterator = places.iterator(); iterator.hasNext();) {
+				Place place = (Place) iterator.next();
+				if(place.brokenStatus == BrokenStatus.cancel){
+					result.set(0, result.get(0) + 1);
+					break;
+				}
+				if(place.brokenStatus == BrokenStatus.swap){
+					result.set(1, result.get(1) + 1);
+					break;
+				}
+				if(place.brokenStatus == BrokenStatus.delay){
+					result.set(2, result.get(2) + 1);
+					break;
+				}
+			}
+		}
+		return result;
+	}
+	
 	static private void createBrokenFlightResultSheet(String brokenResult)
-			throws IOException, InvalidFormatException, InvocationTargetException, InterruptedException {
+			throws IOException, InvalidFormatException, InvocationTargetException, InterruptedException, ParseException {
 		XSSFWorkbook wb = new XSSFWorkbook();
 		Sheet brokenResultSheet = wb.createSheet(broken_result_sheet_name);
 		// copy the header
@@ -1604,15 +1689,25 @@ public class ReadExcel {
 			printInfo(InfoLevel.Error, "Serious Error:Result file The Output file(" + brokenResult + ") is not exist!");
 			return;
 		}
+		ArrayList<Integer> classification = brokenFlightClassification();
 		XSSFWorkbook resultwb = new XSSFWorkbook(OPCPackage.open(file));
 		Sheet result = resultwb.getSheetAt(broken_result_sheet);
 		Row row = result.getRow(0);
 		Row sink = brokenResultSheet.createRow(0);
-		sink.createCell(0).setCellValue(row.getCell(0).getStringCellValue().trim());
-		
+		sink.createCell(0).setCellValue(row.getCell(0).getStringCellValue().trim());	
 		sink.createCell(1).setCellValue(broken_records.size());
+		sink.createCell(2).setCellValue(row.getCell(2).getStringCellValue().trim());	
+		sink.createCell(3).setCellValue(classification.get(0));
+		sink.createCell(4).setCellValue(row.getCell(4).getStringCellValue().trim());	
+		sink.createCell(5).setCellValue(classification.get(1));
+		sink.createCell(6).setCellValue(row.getCell(6).getStringCellValue().trim());	
+		sink.createCell(7).setCellValue(classification.get(2));
 		row = result.getRow(1);
 		sink = brokenResultSheet.createRow(1);
+		sink.createCell(0).setCellValue(row.getCell(0).getStringCellValue().trim());	
+		sink.createCell(1).setCellValue(f_joint_flights.size());
+		row = result.getRow(2);
+		sink = brokenResultSheet.createRow(2);
 		for (int i = 0; i < row.getLastCellNum(); i++) {
 			// printInfo(InfoLevel.Info, "-> " + i + );
 			sink.createCell(i).setCellValue(row.getCell(i).getStringCellValue().trim());
@@ -1678,7 +1773,7 @@ public class ReadExcel {
 	}
 
 	static private void flushToFile(XSSFWorkbook wb, Sheet sheet, String excelname, String brokenResult)
-			throws IOException, InvalidFormatException, InvocationTargetException, InterruptedException {
+			throws IOException, InvalidFormatException, InvocationTargetException, InterruptedException, ParseException {
 		if (sheet == null)
 			return;
 

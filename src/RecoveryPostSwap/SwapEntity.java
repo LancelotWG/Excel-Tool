@@ -7,6 +7,7 @@ public class SwapEntity {
 	public String orgAircraft = "";
 	public String swappedAricraft = "";
 	public Date recoveryEnd = null;
+	public Date recoveryBegin = null;
 
 	SwapEntity(String originalAc, String swappedAc) {
 

@@ -113,7 +113,9 @@ public  class  Main implements ActionListener{
 					entry.charAt(0)=='R' ||  entry.charAt(0)=='r' || 
 					entry.charAt(0)=='S' ||  entry.charAt(0)=='s' 
 					/*修改自兰望桂*/
-					|| entry.charAt(0)=='T' || entry.charAt(0)=='t'))
+					|| entry.charAt(0)=='T' || entry.charAt(0)=='t'
+					|| entry.charAt(0)=='G' || entry.charAt(0)=='g'
+					|| entry.charAt(0)=='N' || entry.charAt(0)=='n'))
 				/*entry.charAt(0)=='C' ||  entry.charAt(0)=='c' ||
 				entry.charAt(0)=='S' ||  entry.charAt(0)=='s' ||*/
 			{
@@ -169,6 +171,17 @@ public  class  Main implements ActionListener{
 					brokenResult=entry.substring(2);	
 					if(!isCorrectFile(brokenResult))
 						return false;
+				}
+				/**
+				 * 增加联程航班时间段
+				 */
+				else if(flag=='G'||flag=='g')
+				{
+					ReadExcel.recovery_Begin=entry.substring(2).replace('.', ' ');
+				}
+				else if(flag=='N'||flag=='n')
+				{
+					ReadExcel.recovery_End=entry.substring(2).replace('.', ' ');;
 				}
 				//修改自兰望桂
 			}
